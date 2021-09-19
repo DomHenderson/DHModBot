@@ -48,9 +48,9 @@ function onMessageHandler (target: string, context: tmi.ChatUserstate, msg: stri
 		commandName.toLocaleLowerCase() === 'iub'
 	) {
 		if(isUntrustedBot(args[0])) {
-			client.say(target, `/me ${args[0]} is an untrusted bot`);
+			client.say(target, `/me ${args[0]} seems to be an untrusted bot`);
 		} else {
-			client.say(target, `/me ${args[0]} is not an untrusted bot`);
+			client.say(target, `/me ${args[0]} does not seem to be an untrusted bot`);
 		}
 	} else if (commandName.toLocaleLowerCase() === 'ping') {
 		client.say(target, '/me pong!');
