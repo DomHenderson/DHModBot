@@ -13,10 +13,6 @@ export async function UpdateBotList() {
 async function fetchList() {
 	console.log('Fetching botlist, this will take a moment..');
 	const res: any = await axios.get('https://api.twitchinsights.net/v1/bots/all');
-	const headerDate = res.headers && res.headers.Date ? res.headers.Date : 'no response date';
-	console.log('Status code:', res.statusCode);
-	console.log('Date in Response header', headerDate);
-
 	const json = res.data;
 	console.log('Received list of ' + json.bots.length + ' names.');
 	return json.bots;
