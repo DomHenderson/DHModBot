@@ -2,6 +2,7 @@ import fs from 'fs';
 import tmi from 'tmi.js';
 import { UpdateBotList } from './UpdateBotList';
 import { ClientOptions } from './secret/secrets';
+import { followerCheck } from './followerCheck';
 
 const client: tmi.Client = new tmi.client(ClientOptions);
 
@@ -17,6 +18,18 @@ UpdateBotList();
 
 // Called every time a message comes in
 function onMessageHandler (target: string, context: tmi.ChatUserstate, msg: string, self: boolean) {
+	if(context['display-name']) {
+		const followerName: string|null = followerCheck(target, msg, context['display-name'])
+		if(followerName) {
+			if(isUntrustedBot(followerName)) {
+				client.say(target, `/me ${followerName} has registered as an untrusted bot, autobanning`);
+				client.say(target, `/ban ${followerName}`);
+			} else {
+				client.say(target, `/me ${followerName} does not appear to be an untrusted bot. Welcome! (This welcome was sent automatically)`);
+			}
+		}
+	}
+
 	if (self) { return; } // Ignore messages from the bot
 
 	// Remove whitespace from chat message
