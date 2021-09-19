@@ -57,7 +57,7 @@ function onJoinHandler(channel: string, username: string, self: boolean) {
 	console.log(channel);
 	console.log(username);
 	console.log(self);
-	if(isUntrustedBot(username)) {
+	if(isUntrustedBot(username) && !self) {
 		console.log(`${username} is an untrusted bot, banning`);
 		client.say(channel, `/me ${username} has registered as an untrusted bot, autobanning`);
 		client.say(channel, `/ban ${username}`);
