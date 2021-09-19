@@ -51,6 +51,8 @@ function onMessageHandler (target: string, context: tmi.ChatUserstate, msg: stri
 		} else {
 			client.say(target, `/me ${args[0]} is not an untrusted bot`);
 		}
+	} else if (commandName.toLocaleLowerCase() === 'ping') {
+		client.say(target, '/me pong!');
 	} else {
 		console.log(`* Unknown command ${commandName}`);
 	}
