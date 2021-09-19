@@ -43,6 +43,7 @@ function onMessageHandler (target: string, context: tmi.ChatUserstate, msg: stri
 
 	// If the command is known, let's execute it
 	if (
+		commandName.toLocaleLowerCase() === 'check' ||
 		commandName.toLocaleLowerCase() === 'isuntrustedbot' ||
 		commandName.toLocaleLowerCase() === 'iub'
 	) {
