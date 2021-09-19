@@ -30,8 +30,8 @@ function onMessageHandler (target: string, context: tmi.ChatUserstate, msg: stri
 
 	// If the command is known, let's execute it
 	if (
-		commandName.toLocaleLowerCase() === 'istrustedbot' ||
-		commandName.toLocaleLowerCase() === 'itb'
+		commandName.toLocaleLowerCase() === 'isuntrustedbot' ||
+		commandName.toLocaleLowerCase() === 'iub'
 	) {
 		if(isUntrustedBot(args[0])) {
 			client.say(target, `/me ${args[0]} is an untrusted bot`);
