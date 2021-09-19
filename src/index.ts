@@ -53,6 +53,9 @@ function onMessageHandler (target: string, context: tmi.ChatUserstate, msg: stri
 		}
 	} else if (commandName.toLocaleLowerCase() === 'ping') {
 		client.say(target, '/me pong!');
+	} else if (commandName.toLocaleLowerCase() === 'stop') {
+		client.say(target, '/me Bye!');
+		client.part(target);
 	} else {
 		console.log(`* Unknown command ${commandName}`);
 	}
