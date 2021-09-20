@@ -23,7 +23,7 @@ function onMessageHandler (target: string, context: tmi.ChatUserstate, msg: stri
 		if(followerName) {
 			if(isUntrustedBot(followerName)) {
 				client.say(target, `/me ${followerName} has registered as an untrusted bot, autobanning`);
-				client.say(target, `/ban ${followerName}`);
+				client.say(target, `/ban ${followerName} Suspected bot`);
 			} else {
 				client.say(target, `/me ${followerName} does not appear to be an untrusted bot. Welcome! (This welcome was sent automatically)`);
 			}
@@ -72,7 +72,7 @@ function onJoinHandler(channel: string, username: string, self: boolean) {
 	if(isUntrustedBot(username) && !self) {
 		console.log(`${username} is an untrusted bot, banning`);
 		client.say(channel, `/me ${username} has registered as an untrusted bot, autobanning`);
-		client.say(channel, `/ban ${username}`);
+		client.say(channel, `/ban ${username} Suspected bot`);
 	} else {
 		console.log(`${username} is not an untrusted bot`);
 	}
