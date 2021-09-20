@@ -47,7 +47,13 @@ function onMessageHandler (target: string, context: tmi.ChatUserstate, msg: stri
 	if(splitMessage[0][0] !== '!') { return; } // Ignore messages that aren't commands
 
 	// If the command is known, let's execute it
-	if (
+	if (commandName.toLocaleLowerCase() === 'join') {
+		if(args[0] && context['display-name'] && context['display-name'] == ClientOptions.identity?.username) {
+			client.join(args[0]);
+		} else {
+			console.log(`* Rejected join request to ${args[0]} by ${context['display-name']}`);
+		}
+	} else if (
 		commandName.toLocaleLowerCase() === 'check' ||
 		commandName.toLocaleLowerCase() === 'isuntrustedbot' ||
 		commandName.toLocaleLowerCase() === 'iub'
