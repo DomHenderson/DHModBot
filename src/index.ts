@@ -26,7 +26,7 @@ function onMessageHandler (target: string, context: tmi.ChatUserstate, msg: stri
 				if(!getQuiet(target)) {
 					client.say(target, `/me ${followerName} has registered as an untrusted bot, autobanning`);
 				}
-				client.say(target, `/ban ${followerName}`);
+				client.say(target, `/ban ${followerName} Suspected bot`);
 			} else {
 				client.say(target, `/me ${followerName} does not appear to be an untrusted bot. Welcome! (This welcome was sent automatically)`);
 			}
@@ -74,11 +74,6 @@ function onConnectedHandler (addr: string, port: number) {
 	console.log(`* Connected to ${addr}:${port}`);
 }
 
-function isUntrustedBot(username: string): boolean {
-	const botList: string[] = JSON.parse(fs.readFileSync('./list.json', 'utf8'));
-	return botList.includes(username);
-}
-
 function onJoinHandler(channel: string, username: string, self: boolean) {
 	console.log(`${self ? 'I' : username} joined ${channel}`);
 	if(isUntrustedBot(username) && !self) {
@@ -86,10 +81,15 @@ function onJoinHandler(channel: string, username: string, self: boolean) {
 		if(!getQuiet(channel)) {
 			client.say(channel, `/me ${username} has registered as an untrusted bot, autobanning`);
 		}
-		client.say(channel, `/ban ${username}`);
+		client.say(channel, `/ban ${username} Suspected bot`);
 	} else {
 		console.log(`${username} is not an untrusted bot`);
 	}
+}
+
+function isUntrustedBot(username: string): boolean {
+	const botList: string[] = JSON.parse(fs.readFileSync('./list.json', 'utf8'));
+	return botList.includes(username);
 }
 
 setInterval(UpdateBotList, 6*60*1000);
