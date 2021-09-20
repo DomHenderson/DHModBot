@@ -67,11 +67,6 @@ function onConnectedHandler (addr: string, port: number) {
 	console.log(`* Connected to ${addr}:${port}`);
 }
 
-function isUntrustedBot(username: string): boolean {
-	const botList: string[] = JSON.parse(fs.readFileSync('./list.json', 'utf8'));
-	return botList.includes(username);
-}
-
 function onJoinHandler(channel: string, username: string, self: boolean) {
 	console.log(`${self ? 'I' : username} joined ${channel}`);
 	if(isUntrustedBot(username) && !self) {
@@ -81,6 +76,11 @@ function onJoinHandler(channel: string, username: string, self: boolean) {
 	} else {
 		console.log(`${username} is not an untrusted bot`);
 	}
+}
+
+function isUntrustedBot(username: string): boolean {
+	const botList: string[] = JSON.parse(fs.readFileSync('./list.json', 'utf8'));
+	return botList.includes(username);
 }
 
 setInterval(UpdateBotList, 6*60*1000);
