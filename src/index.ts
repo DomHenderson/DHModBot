@@ -28,7 +28,9 @@ function onMessageHandler (target: string, context: tmi.ChatUserstate, msg: stri
 				}
 				client.say(target, `/ban ${followerName} Suspected bot`);
 			} else {
-				client.say(target, `/me ${followerName} does not appear to be an untrusted bot. Welcome! (This welcome was sent automatically)`);
+				if(!getQuiet(target)) {
+					client.say(target, `/me ${followerName} does not appear to be an untrusted bot. Welcome! (This welcome was sent automatically)`);
+				}
 			}
 		}
 	}
