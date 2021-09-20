@@ -3,6 +3,7 @@ import tmi from 'tmi.js';
 import { UpdateBotList } from './UpdateBotList';
 import { ClientOptions } from './secret/secrets';
 import { followerCheck } from './followerCheck';
+import { getQuiet, setQuiet, setLoud } from './verbosity';
 
 const client: tmi.Client = new tmi.client(ClientOptions);
 
@@ -22,7 +23,9 @@ function onMessageHandler (target: string, context: tmi.ChatUserstate, msg: stri
 		const followerName: string|null = followerCheck(target, msg, context['display-name'])
 		if(followerName) {
 			if(isUntrustedBot(followerName)) {
-				client.say(target, `/me ${followerName} has registered as an untrusted bot, autobanning`);
+				if(!getQuiet(target)) {
+					client.say(target, `/me ${followerName} has registered as an untrusted bot, autobanning`);
+				}
 				client.say(target, `/ban ${followerName}`);
 			} else {
 				client.say(target, `/me ${followerName} does not appear to be an untrusted bot. Welcome! (This welcome was sent automatically)`);
@@ -52,8 +55,12 @@ function onMessageHandler (target: string, context: tmi.ChatUserstate, msg: stri
 		} else {
 			client.say(target, `/me ${args[0]} does not seem to be an untrusted bot`);
 		}
+	} else if (commandName.toLocaleLowerCase() === 'loud') {
+		setLoud(target);
 	} else if (commandName.toLocaleLowerCase() === 'ping') {
 		client.say(target, '/me pong!');
+	} else if (commandName.toLocaleLowerCase() === 'quiet') {
+		setQuiet(target);
 	} else if (commandName.toLocaleLowerCase() === 'stop') {
 		client.say(target, '/me Bye!');
 		client.part(target);
@@ -76,7 +83,9 @@ function onJoinHandler(channel: string, username: string, self: boolean) {
 	console.log(`${self ? 'I' : username} joined ${channel}`);
 	if(isUntrustedBot(username) && !self) {
 		console.log(`${username} is an untrusted bot, banning`);
-		client.say(channel, `/me ${username} has registered as an untrusted bot, autobanning`);
+		if(!getQuiet(channel)) {
+			client.say(channel, `/me ${username} has registered as an untrusted bot, autobanning`);
+		}
 		client.say(channel, `/ban ${username}`);
 	} else {
 		console.log(`${username} is not an untrusted bot`);
