@@ -11,17 +11,17 @@ export async function UpdateBotList() {
 }
 
 async function fetchList() {
-	console.log('Fetching botlist, this will take a moment..');
+	console.log('-Fetching botlist, this will take a moment..');
 	const res: any = await axios.get('https://api.twitchinsights.net/v1/bots/all');
 	const json = res.data;
-	console.log('Received list of ' + json.bots.length + ' names.');
+	console.log('-Received list of ' + json.bots.length + ' names.');
 	return json.bots;
 }
 
 function filterList(channelMinimum: number, daysMinimum: number, lastOnline: number, whitelist: string[], bots: any) {
-	console.log('Filtering list..');
-	console.log('Minimum Channels the bot needs to be in: ' + channelMinimum);
-	console.log('Last Online within: ' + daysMinimum + ' days');
+	console.log('-Filtering list..');
+	console.log('-Minimum Channels the bot needs to be in: ' + channelMinimum);
+	console.log('-Last Online within: ' + daysMinimum + ' days');
 	let filteredBots = [];
 
 	for (let i = 0; i < bots.length; i++) {
@@ -48,5 +48,5 @@ function filterList(channelMinimum: number, daysMinimum: number, lastOnline: num
 
 	filteredBots.sort();
 	fs.writeFileSync('list.json', JSON.stringify(filteredBots, null, 2), 'utf8');
-	console.log('The list.json now contains ' + filteredBots.length + ' usernames.');
+	console.log('-The list.json now contains ' + filteredBots.length + ' usernames.');
 }

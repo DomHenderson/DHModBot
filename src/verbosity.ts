@@ -5,7 +5,7 @@ let verbosityLevels: Map<string, string> = new Map<string, string>();
 loadLevels();
 
 export function getQuiet(channel: string): boolean {
-	console.log(`Checking quietness for ${channel}`);
+	console.log(`	Checking quietness for ${channel}`);
 	return verbosityLevels.get(channel) == 'quiet';
 }
 
