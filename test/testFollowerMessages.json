@@ -1,0 +1,7 @@
+[
+	["TEST_CHANNEL", {
+		"chatbot": "TEST_CHATBOT",
+		"messageStart": "START",
+		"messageEnd": "END"
+	}]
+]
