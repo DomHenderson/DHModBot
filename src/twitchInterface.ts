@@ -1,8 +1,8 @@
+import axios from 'axios';
 import tmi from 'tmi.js';
-import { isUntrustedBot } from './botAnalysis';
 import { BanBot, ChatAction, Join, Part, Say } from './chatActions';
 import { IModBot } from './modbot';
-import { ClientOptions } from './secret/secrets';
+import { ClientId, ClientOptions, OAuthToken } from './secret/secrets';
 
 export class TwitchInterface {
 	private modBot: IModBot;
@@ -98,5 +98,27 @@ export class TwitchInterface {
 	
 		console.log(`	Sending(${channel}): ${message}`);
 		this.client.say(channel, `/me ${message}`);
+	}
+
+	async getUserID(username: string): Promise<string|undefined> {
+		let config = {
+			headers: {
+				Authorization: `Bearer ${OAuthToken}`,
+				'Client-Id': ClientId
+			}
+		};
+		const res = await axios.get(`https://api.twitch.tv/helix/users?login=${username}`, config);
+		return res.data.data[0].id;
+	}
+
+	async getUserFollows(userId: string) {
+		let config = {
+			headers: {
+				Authorization: `Bearer ${OAuthToken}`,
+				'Client-Id': ClientId
+			}
+		};
+		const res = await axios.get(`https://api.twitch.tv/helix/users/follows?to_id=${userId}`, config);
+		return res.data;
 	}
 }
