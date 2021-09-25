@@ -111,7 +111,7 @@ export class TwitchInterface {
 		return res.data.data[0].id;
 	}
 
-	async getUserFollows(userId: string) {
+	async getRecentFollowers(userId: string) {
 		let config = {
 			headers: {
 				Authorization: `Bearer ${OAuthToken}`,
@@ -119,6 +119,38 @@ export class TwitchInterface {
 			}
 		};
 		const res = await axios.get(`https://api.twitch.tv/helix/users/follows?to_id=${userId}`, config);
+		return res.data;
+	}
+
+	async getAllFollowers(userId: string) {
+		let config = {
+			headers: {
+				Authorization: `Bearer ${OAuthToken}`,
+				'Client-Id': ClientId
+			}
+		};
+
+		let res = await axios.get(`https://api.twitch.tv/helix/users/follows?to_id=${userId}`, config);
+		let cursor: string|undefined = res.data.pagination.cursor;
+		let followers: any[] = res.data.data;
+
+		while(cursor !== undefined) {
+			res = await axios.get(`https://api.twitch.tv/helix/users/follows?to_id=${userId}&after=${cursor}`, config);
+			cursor = res.data.pagination.cursor;
+			followers = followers.concat(res.data.data);
+		}
+
+		return followers;
+	}
+
+	async getUsersFollowedBy(userId: string) {
+		let config = {
+			headers: {
+				Authorization: `Bearer ${OAuthToken}`,
+				'Client-Id': ClientId
+			}
+		};
+		const res = await axios.get(`https://api.twitch.tv/helix/users/follows?from_id=${userId}`, config);
 		return res.data;
 	}
 }
