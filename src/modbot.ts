@@ -1,7 +1,7 @@
 import fs from 'fs';
-import { isUntrustedBot } from './botAnalysis';
 import { ClientOptions } from './secret/secrets';
 import { BanBot, ChatAction, Join, Part, Say } from './chatActions';
+import { IBotAnalyser } from './botAnalysis';
 
 export interface IModBot {
 	processJoin(channel: string, username: string): ChatAction[];
@@ -10,17 +10,16 @@ export interface IModBot {
 
 export class ModBot implements IModBot {
 	private readonly botFunctions: Map<string,(channel: string, args: string[], sender: string|undefined)=>ChatAction[]>;
-	private readonly botListPath: string;
 	private readonly followerMap: Map<string, {chatbot: string; messageStart: string; messageEnd: string;}>;
 	private readonly verbosityPath: string;
-	private readonly followerMessagesPath: string;
+	private readonly analyser: IBotAnalyser;
 
 	private verbosityLevels: Map<string, string>;
 
 	constructor(
-		botListPath: string,
 		verbosityPath: string,
-		followerMessagesPath: string
+		followerMessagesPath: string,
+		analyser: IBotAnalyser
 	) {
 		this.botFunctions = new Map([
 			['check', (c: string, a: string[], s: string|undefined) => {return this.botCheck(c,a);}],
@@ -32,18 +31,17 @@ export class ModBot implements IModBot {
 			['quiet', (c: string, a: string[], s: string|undefined) => {return this.quiet(c);}],
 			['stop', (c: string, a: string[], s: string|undefined) => {return this.disconnect(c);}]
 		]);
-		this.botListPath = botListPath;
-		this.followerMessagesPath = followerMessagesPath;
 		this.followerMap = new Map(JSON.parse(
 			fs.readFileSync(followerMessagesPath, 'utf8')
 		));
 		this.verbosityPath = verbosityPath;
 		this.verbosityLevels = new Map();
 		this.loadLevels();
+		this.analyser = analyser;
 	}
 
 	processJoin(channel: string, username: string): ChatAction[] {
-		if(isUntrustedBot(username, this.botListPath)) {
+		if(this.analyser.isUntrustedBot(username)) {
 			console.log(`${username} is an untrusted bot, banning`);
 			return this.getQuiet(channel) 
 				? [
@@ -92,7 +90,7 @@ export class ModBot implements IModBot {
 	processFollowAlert(message: string, channel: string, sender: string|undefined): ChatAction[] {
 		const followerName: string|undefined = this.extractFollowerName(message, channel);
 		if(!followerName) { return []; }
-		if(isUntrustedBot(followerName, this.botListPath)) {
+		if(this.analyser.isUntrustedBot(followerName)) {
 			return this.getQuiet(channel)
 				? [
 					new BanBot(channel, followerName)
@@ -168,7 +166,7 @@ export class ModBot implements IModBot {
 		
 		return [new Say(
 			channel,
-			isUntrustedBot(args[0], this.botListPath)
+			this.analyser.isUntrustedBot(args[0])
 				? `${args[0]} seems to be an untrusted bot`
 				: `${args[0]} does not seem to be an untrusted bot`
 		)];
@@ -202,19 +200,16 @@ export class ModBot implements IModBot {
 	getQuiet(channel: string): boolean {
 		return this.verbosityLevels.get(channel) === 'quiet';
 	}
-
 	setQuiet(channel: string): void {
 		console.log(`Setting verbosity level for ${channel} to quiet`);
 		this.verbosityLevels.set(channel, 'quiet');
 		this.saveLevels();
 	}
-
 	setLoud(channel: string): void {
 		console.log(`Setting verbosity level for ${channel} to loud`);
 		this.verbosityLevels.set(channel, 'loud');
 		this.saveLevels();
 	}
-
 	loadLevels() {
 		this.verbosityLevels.clear();
 		const json = JSON.parse(fs.readFileSync('./src/secret/verbosity.json', 'utf-8'));
@@ -222,7 +217,6 @@ export class ModBot implements IModBot {
 			this.verbosityLevels.set(value, json[value]);
 		}
 	}
-	
 	saveLevels() {
 		let json: any = {};
 		this.verbosityLevels.forEach((value, key) => {

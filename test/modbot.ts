@@ -3,14 +3,30 @@ import { expect } from 'chai';
 import { BanBot, Join, Part, Say } from '../src/chatActions';
 import { ModBot } from '../src/modbot';
 import { ClientOptions } from '../src/secret/secrets';
+import { IBotAnalyser, ViewFollowChecker } from '../src/botAnalysis';
 
 afterEach(() => {
 	fs.writeFileSync('./test/testVerbosity.json', '{}', 'utf-8');
 })
 
+class TestBotAnalyser implements IBotAnalyser {
+	isUntrustedBot(username: string): boolean {
+		return username === 'TEST_BOT_1' || username === 'TEST_BOT_2';
+	}
+
+}
+
+function CreateTestModBot(): ModBot {
+	return new ModBot(
+		'./test/testVerbosity.json',
+		'./test/testFollowerMessages.json',
+		new TestBotAnalyser()
+	);
+}
+
 describe('Bot Commands', () => {
 	it('!check non-bot', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		const result = modBot.processMessage(
 			'TEST_CHANNEL',
 			'!check TEST_NON_BOT',
@@ -26,7 +42,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('!check non-bot (quiet)', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		modBot.processMessage(
 			'TEST_CHANNEL',
 			'!quiet',
@@ -48,7 +64,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('!check bot', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		const result = modBot.processMessage(
 			'TEST_CHANNEL',
 			'!check TEST_BOT_2',
@@ -64,7 +80,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('!check bot (quiet)', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		modBot.processMessage(
 			'TEST_CHANNEL',
 			'!quiet',
@@ -86,7 +102,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('!check no name', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		const result = modBot.processMessage(
 			'TEST_CHANNEL',
 			'!check',
@@ -102,7 +118,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('!check no name (quiet)', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		modBot.processMessage(
 			'TEST_CHANNEL',
 			'!quiet',
@@ -124,7 +140,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('!join valid', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		const result = modBot.processMessage(
 			'TEST_CHANNEL',
 			'!join OTHER_CHANNEL',
@@ -137,7 +153,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('!join valid (quiet)', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		modBot.processMessage(
 			'TEST_CHANNEL',
 			'!quiet',
@@ -156,7 +172,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('!join no channel', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		const result = modBot.processMessage(
 			'TEST_CHANNEL',
 			'!join',
@@ -167,7 +183,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('!join no channel (quiet)', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		modBot.processMessage(
 			'TEST_CHANNEL',
 			'!quiet',
@@ -184,7 +200,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('!join without permission', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		const result = modBot.processMessage(
 			'TEST_CHANNEL',
 			'!join OTHER_CHANNEL',
@@ -195,7 +211,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('!join without permission (quiet)', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		modBot.processMessage(
 			'TEST_CHANNEL',
 			'!quiet',
@@ -212,7 +228,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('!ping', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		const result = modBot.processMessage(
 			'TEST_CHANNEL',
 			'!ping',
@@ -225,7 +241,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('!ping (quiet)', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		modBot.processMessage(
 			'TEST_CHANNEL',
 			'!quiet',
@@ -244,7 +260,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('!stop', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		const result = modBot.processMessage(
 			'TEST_CHANNEL',
 			'!stop',
@@ -260,7 +276,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('!stop (quiet)', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		modBot.processMessage(
 			'TEST_CHANNEL',
 			'!quiet',
@@ -282,7 +298,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('non-bot joins', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		const result = modBot.processJoin(
 			'TEST_CHANNEL',
 			'TEST_NOT_A_BOT'
@@ -291,7 +307,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('non-bot joins (quiet)', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		modBot.processMessage(
 			'TEST_CHANNEL',
 			'!quiet',
@@ -306,7 +322,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('bot joins', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		const result = modBot.processJoin(
 			'TEST_CHANNEL',
 			'TEST_BOT_1'
@@ -324,7 +340,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('bot joins (quiet)', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		modBot.processMessage(
 			'TEST_CHANNEL',
 			'!quiet',
@@ -344,7 +360,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('non-bot follow message', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		const result = modBot.processMessage(
 			'TEST_CHANNEL',
 			'STARTTEST_NON_BOTEND',
@@ -360,7 +376,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('non-bot follow message (quiet)', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		modBot.processMessage(
 			'TEST_CHANNEL',
 			'!quiet',
@@ -377,7 +393,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('bot follow message', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		const result = modBot.processMessage(
 			'TEST_CHANNEL',
 			'STARTTEST_BOT_1END',
@@ -397,7 +413,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('bot follow message (quiet)', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		modBot.processMessage(
 			'TEST_CHANNEL',
 			'!quiet',
@@ -419,7 +435,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('non-command non-follow message', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		const result = modBot.processMessage(
 			'TEST_CHANNEL',
 			'A normal message',
@@ -430,7 +446,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('non-command non-follow message (quiet)', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		modBot.processMessage(
 			'TEST_CHANNEL',
 			'!quiet',
@@ -447,7 +463,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('non-command non-follow chatbot message', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		const result = modBot.processMessage(
 			'TEST_CHANNEL',
 			'A normal message',
@@ -458,7 +474,7 @@ describe('Bot Commands', () => {
 	});
 
 	it('non-command non-follow chatbot message (quiet)', () => {
-		let modBot: ModBot = new ModBot('./test/testBotList.json', './test/testVerbosity.json', './test/testFollowerMessages.json');
+		let modBot: ModBot = CreateTestModBot();
 		modBot.processMessage(
 			'TEST_CHANNEL',
 			'!quiet',
