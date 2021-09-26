@@ -1,13 +1,25 @@
 import fs from 'fs';
 
-export function isUntrustedBot(username: string, botListPath: string): boolean {
-	return (
-		// TODO: isFollowingTooFast(username) ||
-		isViewingManyChannels(username, botListPath)
-	);
+export interface IBotAnalyser {
+	isUntrustedBot(username: string): boolean;
 }
 
-function isViewingManyChannels(username: string, botListPath: string): boolean {
-	const botList: string[] = JSON.parse(fs.readFileSync(botListPath ? botListPath : './list.json', 'utf8'));
-	return botList.includes(username);
+export class ViewFollowChecker implements IBotAnalyser{
+	private viewBotList: string[];
+	private botListPath: string;
+
+	constructor(
+		botListPath: string,
+	) {
+		this.botListPath = botListPath;
+		this.viewBotList = JSON.parse(fs.readFileSync(this.botListPath, 'utf8'));
+	}
+
+	isUntrustedBot(username: string): boolean {
+		return this.isViewingManyChannels(username);
+	}
+
+	isViewingManyChannels(username: string): boolean {
+		return this.viewBotList.includes(username);
+	}
 }
