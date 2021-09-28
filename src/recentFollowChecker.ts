@@ -1,26 +1,29 @@
 import fs from 'fs';
-import { FollowData, TwitchInterface } from './twitchInterface';
+import { IChatInterface } from './chatInterface';
+import { FollowData, ITwitchAPI } from './twitchApi';
 
 export class RecentFollowChecker {
 	private readonly recentFollowMap: Map<string, FollowData>;
 	private readonly recentFollowMapPath: string = './src/secret/recentFollows.json';
-	private readonly TI: TwitchInterface;
+	private readonly twitch: ITwitchAPI;
+	private readonly chat: IChatInterface;
 
 	constructor(
-		TI: TwitchInterface
+		chat: IChatInterface,
+		twitch: ITwitchAPI
 	) {
 		this.recentFollowMap = new Map(JSON.parse(
 			fs.readFileSync(this.recentFollowMapPath, 'utf-8')
 		));
-
-		this.TI = TI;
+		this.chat = chat;
+		this.twitch = twitch;
 	}
 
 	async checkRecentFollows(channelNames: string[]): Promise<void> {
 		const unfilteredChannels = await Promise.all(channelNames.map(
 				async(channelName: string) => {
 					return {
-						id: await this.TI.getUserID(channelName),
+						id: await this.twitch.getUserID(channelName),
 						name: channelName
 					};
 				}
@@ -34,7 +37,7 @@ export class RecentFollowChecker {
 			const checkedFollow: FollowData|undefined = this.recentFollowMap.get(id);
 			
 			if(!checkedFollow) {
-				let recentFollows: FollowData[]|undefined = await this.TI.getRecentFollowers(id);
+				let recentFollows: FollowData[]|undefined = await this.twitch.getRecentFollowers(id);
 				if(recentFollows !== undefined && recentFollows !== []) {
 					this.recentFollowMap.set(id, recentFollows[0]);
 				}
@@ -45,7 +48,7 @@ export class RecentFollowChecker {
 			}
 
 			const checkedFollowDate = new Date(checkedFollow.followed_at);
-			const follows = await this.TI.getFollowersSince(id, checkedFollowDate);
+			const follows = await this.twitch.getFollowersSince(id, checkedFollowDate);
 			return {
 				channel: {id, name},
 				follows: follows
@@ -55,7 +58,7 @@ export class RecentFollowChecker {
 		recentFollows.forEach(({channel, follows}) => {
 			console.log(channel);
 			console.log(follows);
-			if(follows && follows.length > 0 && this.TI.getConnectedChannels().includes(channel.name)) {
+			if(follows && follows.length > 0 && this.chat.getConnectedChannels().includes(channel.name)) {
 				this.recentFollowMap.set(channel.id, follows[0]);
 			}
 		});
@@ -64,7 +67,7 @@ export class RecentFollowChecker {
 
 		const followRates = await Promise.all(recentFollows.map(async ({channel, follows}) => {
 			const followData = await Promise.all(follows.map(async(follow) => {
-				const time = await this.TI.getTimeBetweenFollows(follow.from_id);
+				const time = await this.twitch.getTimeBetweenFollows(follow.from_id);
 				return {
 					name: follow.from_name,
 					followTime: time
@@ -97,8 +100,8 @@ export class RecentFollowChecker {
 			.map(({broadcaster, follower, followTime}) => {return {broadcaster, follower};});
 
 		toBan.forEach(({broadcaster, follower}) => {
-			if(this.TI.getConnectedChannels().includes(broadcaster)) {
-				this.TI.banBot(broadcaster, follower);
+			if(this.chat.getConnectedChannels().includes(broadcaster)) {
+				this.chat.banBot(broadcaster, follower);
 			}
 		});
 	}
