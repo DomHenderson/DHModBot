@@ -404,6 +404,62 @@ describe('Bot Commands', () => {
 		]);
 	});
 
+	it('non-bot joins (self)', () => {
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateJoin(
+			TestChannel,
+			'TEST_NOT_A_BOT',
+			true
+		);
+		expect(chat.getLog()).to.eql([]);
+	});
+
+	it('non-bot joins (quiet, self)', () => {
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
+			'!quiet',
+			false
+		);
+		chat.simulateJoin(
+			TestChannel,
+			'TEST_NOT_A_BOT',
+			true
+		);
+		expect(chat.getLog()).to.eql([]);
+	});
+
+	it('bot joins (self)', () => {
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateJoin(
+			TestChannel,
+			'TEST_BOT_1',
+			true
+		);
+		expect(chat.getLog()).to.eql([]);
+	});
+
+	it('bot joins (quiet, self)', () => {
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
+			'!quiet',
+			false
+		);
+		chat.simulateJoin(
+			TestChannel,
+			'TEST_BOT_1',
+			true
+		);
+		expect(chat.getLog()).to.eql([]);
+	});
+
 	it('non-bot follow message', () => {
 		const chat: TestChatInterface = new TestChatInterface();
 		CreateTestModBot(chat);
@@ -530,6 +586,4 @@ describe('Bot Commands', () => {
 		);
 		expect(chat.getLog()).to.eql([]);
 	});
-
-	//TODO add self check to join
 })
