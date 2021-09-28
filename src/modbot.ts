@@ -1,25 +1,24 @@
 import fs from 'fs';
 import { ClientOptions } from './secret/secrets';
-import { BanBot, ChatAction, Join, Part, Say } from './chatActions';
 import { IBotAnalyser } from './botAnalysis';
+import { IChatInterface } from './chatInterface';
 
-export interface IModBot {
-	processJoin(channel: string, username: string): ChatAction[];
-	processMessage(channel: string, message: string, sender: string|undefined, self: boolean): ChatAction[];
-}
-
-export class ModBot implements IModBot {
-	private readonly botFunctions: Map<string,(channel: string, args: string[], sender: string|undefined)=>ChatAction[]>;
+export class ModBot implements ModBot {
+	private readonly botFunctions: Map<string,(channel: string, args: string[], sender: string|undefined)=>void>;
 	private readonly followerMap: Map<string, {chatbot: string; messageStart: string; messageEnd: string;}>;
 	private readonly verbosityPath: string;
 	private readonly analyser: IBotAnalyser;
+	private readonly chat: IChatInterface;
+	private readonly username: string;
 
 	private verbosityLevels: Map<string, string>;
 
 	constructor(
+		username: string,
+		analyser: IBotAnalyser,
+		chat: IChatInterface,
 		verbosityPath: string,
-		followerMessagesPath: string,
-		analyser: IBotAnalyser
+		followerMessagesPath: string
 	) {
 		this.botFunctions = new Map([
 			['check', (c: string, a: string[], s: string|undefined) => {return this.botCheck(c,a);}],
@@ -38,44 +37,38 @@ export class ModBot implements IModBot {
 		this.verbosityLevels = new Map();
 		this.loadLevels();
 		this.analyser = analyser;
+		this.chat = chat;
+
+		this.chat.addJoinListener((channel, username, self) => this.processJoin(channel, username, self));
+		this.chat.addMessageListener((channel, context, message, self) =>
+			this.processMessage(channel, message, context['display-name'], self)
+		);
+		this.username = username;
 	}
 
-	processJoin(channel: string, username: string): ChatAction[] {
+	processJoin(channel: string, username: string, self: boolean): void {
+		if(self) return;
 		if(this.analyser.isUntrustedBot(username)) {
 			console.log(`${username} is an untrusted bot, banning`);
-			return this.getQuiet(channel) 
-				? [
-					new BanBot(
-						channel,
-						username
-					)
-				]
-				: [
-					new Say(
-						channel,
-						`${username} has registered as an untrusted bot, autobanning`
-					),
-					new BanBot(
-						channel,
-						username
-					)
-				];
+			if(!this.getQuiet(channel)) {
+				this.chat.say(channel,`${username} has registered as an untrusted bot, autobanning`);
+			}
+			this.chat.banBot(channel, username);
 		} else {
 			console.log(`${username} is not an untrusted bot`);
-			return [];
 		}
 	}
 
-	processMessage(channel: string, message: string, sender: string|undefined, self: boolean): ChatAction[] {
+	processMessage(channel: string, message: string, sender: string|undefined, self: boolean): void {
 		console.log(`${channel} - ${sender}: ${message}`);
 
 		if(this.isFollowAlert(message, channel, sender)) {
-			return this.processFollowAlert(message, channel, sender);
+			this.processFollowAlert(message, channel, sender);
 		}
 		
-		if (self) { return [] }
+		if (self) { return; }
 		
-		return this.ifCommandThenRespond(message, channel, sender);
+		this.ifCommandThenRespond(message, channel, sender);
 	}
 
 	isFollowAlert(message: string, channel: string, sender: string|undefined): boolean {
@@ -87,30 +80,18 @@ export class ModBot implements IModBot {
 			message.endsWith(followerMessageInfo.messageEnd)
 		);
 	}
-	processFollowAlert(message: string, channel: string, sender: string|undefined): ChatAction[] {
+	processFollowAlert(message: string, channel: string, sender: string|undefined): void {
 		const followerName: string|undefined = this.extractFollowerName(message, channel);
-		if(!followerName) { return []; }
+		if(!followerName) { return; }
 		if(this.analyser.isUntrustedBot(followerName)) {
-			return this.getQuiet(channel)
-				? [
-					new BanBot(channel, followerName)
-				]
-				: [
-					new Say(
-						channel,
-						`${followerName} has registered as an untrusted bot, autobanning`
-					),
-					new BanBot(channel, followerName)
-				];
+			if(!this.getQuiet(channel)) {
+				this.chat.say(channel,`${followerName} has registered as an untrusted bot, autobanning`);
+			}
+			this.chat.banBot(channel, followerName);
 		} else {
-			return this.getQuiet(channel)
-				? []
-				: [
-					new Say(
-						channel,
-						`${followerName} does not appear to be an untrusted bot. Welcome! (This welcome was sent automatically)`
-					)
-				];
+			if(!this.getQuiet(channel)) {
+				this.chat.say(channel,`${followerName} does not appear to be an untrusted bot. Welcome! (This welcome was sent automatically)`);
+			}
 		}
 	}
 	extractFollowerName(message: string, channel: string): string|undefined {
@@ -125,12 +106,12 @@ export class ModBot implements IModBot {
 		}
 	}
 
-	ifCommandThenRespond(message: string, channel: string, sender: string|undefined): ChatAction[] {
+	ifCommandThenRespond(message: string, channel: string, sender: string|undefined): void {
 		const command: Command|null = this.parseMessage(message);
 
-		if(!command) { return []; }
+		if(!command) { return; }
 
-		return this.executeCommand(command, channel, sender);
+		this.executeCommand(command, channel, sender);
 	}
 	parseMessage(message: string): Command|null {
 		const splitMessage: string[] = message.trim().split(" ");
@@ -146,55 +127,50 @@ export class ModBot implements IModBot {
 			splitMessage.slice(1)
 		);
 	}
-	executeCommand(command: Command, channel: string, sender: string|undefined): ChatAction[] {
+	executeCommand(command: Command, channel: string, sender: string|undefined): void {
 		console.log(`	Executing command ${command.commandName}`);
 
 		const func = this.botFunctions.get(command.commandName.toLocaleLowerCase());
-		return func ? func(channel, command.args, sender) : [];
+		if(func) {
+			func(channel, command.args, sender);
+		}
 	}
 
 
-	botCheck(channel: string, args: string[]): ChatAction[] {
+	botCheck(channel: string, args: string[]): void {
 		console.log(`	botcheck channel:${channel} args: ${args}`)
 		if(args.length == 0) {
 			console.log('	WARNING: Attempted to run botcheck without name');
-			return [new Say(
-				channel,
-				'check requires a name'
-			)];
+			this.chat.say(channel, 'check requires a name');
+			return;
 		}
 		
-		return [new Say(
+		this.chat.say(
 			channel,
 			this.analyser.isUntrustedBot(args[0])
 				? `${args[0]} seems to be an untrusted bot`
 				: `${args[0]} does not seem to be an untrusted bot`
-		)];
+		);
 	}
-	join(channel: string, args: string[], sender: string|undefined): ChatAction[] {
-		if(args[0] && sender && sender == ClientOptions.identity?.username) {
-			return [new Join(args[0])];
+	join(channel: string, args: string[], sender: string|undefined): void {
+		if(args[0] && sender && sender == this.username) {
+			this.chat.join(args[0]);
 		} else {
 			console.log(`	* Rejected join request to ${args[0]} by ${sender}`);
-			return [];
 		}
 	}
-	loud(channel: string): ChatAction[] {
+	loud(channel: string): void {
 		this.setLoud(channel);
-		return [];
 	}
-	ping(channel: string): ChatAction[] {
-		return [new Say(channel, 'pong!')];
+	ping(channel: string): void {
+		this.chat.say(channel, 'pong!');
 	}
-	quiet(channel: string): ChatAction[]{
+	quiet(channel: string): void {
 		this.setQuiet(channel);
-		return [];
 	}
-	disconnect(channel: string): ChatAction[] {
-		return [
-			new Say(channel, 'Bye!'),
-			new Part(channel)
-		];
+	disconnect(channel: string): void {
+		this.chat.say(channel, 'Bye!'),
+		this.chat.part(channel);
 	}
 
 	getQuiet(channel: string): boolean {

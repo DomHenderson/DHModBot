@@ -1,9 +1,16 @@
 import fs from 'fs';
 import { expect } from 'chai';
-import { BanBot, Join, Part, Say } from '../src/chatActions';
 import { ModBot } from '../src/modbot';
-import { ClientOptions } from '../src/secret/secrets';
-import { IBotAnalyser, ViewFollowChecker } from '../src/botAnalysis';
+import { IBotAnalyser } from '../src/botAnalysis';
+import { IChatInterface } from '../src/chatInterface';
+import { ChatUserstate } from 'tmi.js';
+
+const TestChannel: string = 'TEST_CHANNEL';
+const TestContext: ChatUserstate = {
+	'display-name': 'TEST_SENDER'
+};
+const TestModBotUsername: string = 'TEST_MODBOT';
+const TestGoodChatBot: string = 'TEST_CHATBOT';
 
 afterEach(() => {
 	fs.writeFileSync('./test/testVerbosity.json', '{}', 'utf-8');
@@ -13,481 +20,515 @@ class TestBotAnalyser implements IBotAnalyser {
 	isUntrustedBot(username: string): boolean {
 		return username === 'TEST_BOT_1' || username === 'TEST_BOT_2';
 	}
-
 }
 
-function CreateTestModBot(): ModBot {
+class TestChatInterface implements IChatInterface {
+	private connectedChannels: string[] = [];
+	private joinListeners: ((channel: string, username: string, self: boolean) => void)[] = [];
+	private messageListeners: ((channel: string, context: ChatUserstate, message: string, self: boolean) => void)[] = [];
+	private log: string[][] = [];
+	addJoinListener(func: (channel: string, username: string, self: boolean) => void): void {
+		this.joinListeners.push(func);
+	}
+	addMessageListener(func: (channel: string, context: ChatUserstate, message: string, self: boolean) => void): void {
+		this.messageListeners.push(func);
+	}
+	getConnectedChannels(): string[] {
+		return this.connectedChannels;
+	}
+	banBot(channel: string, username: string): void {
+		this.log.push(['BAN', channel, username]);
+	}
+	join(channel: string): void {
+		this.log.push(['JOIN', channel]);
+	}
+	part(channel: string): void {
+		this.log.push(['PART', channel]);
+	}
+	say(channel: string, message: string): void {
+		this.log.push(['SAY', channel, message]);
+	}
+
+	simulateJoin(channel: string, username: string, self: boolean): void {
+		if(self) {
+			this.connectedChannels.push(channel);
+		}
+
+		this.joinListeners.forEach((func) => func(channel, username, self));
+	}
+
+	simulateMessage(channel: string, context: ChatUserstate, message: string, self: boolean): void {
+		this.messageListeners.forEach((func) => func(channel, context, message, self));
+	}
+
+	getLog(): string[][] {
+		return this.log;
+	}
+}
+
+function CreateTestModBot(chat: IChatInterface): ModBot {
 	return new ModBot(
+		TestModBotUsername,
+		new TestBotAnalyser(),
+		chat,
 		'./test/testVerbosity.json',
-		'./test/testFollowerMessages.json',
-		new TestBotAnalyser()
+		'./test/testFollowerMessages.json'
 	);
 }
 
 describe('Bot Commands', () => {
 	it('!check non-bot', () => {
-		let modBot: ModBot = CreateTestModBot();
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!check TEST_NON_BOT',
-			'TEST_SENDER',
 			false
 		);
-		expect(result).to.eql(
-			[new Say(
-				'TEST_CHANNEL',
-				'TEST_NON_BOT does not seem to be an untrusted bot'
-			)]
-		);
+		expect(chat.getLog()).to.eql([
+			['SAY', TestChannel, 'TEST_NON_BOT does not seem to be an untrusted bot']
+		]);
 	});
 
 	it('!check non-bot (quiet)', () => {
-		let modBot: ModBot = CreateTestModBot();
-		modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!quiet',
-			'TEST_SENDER',
 			false
 		);
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!check TEST_NON_BOT',
-			'TEST_SENDER',
 			false
 		);
-		expect(result).to.eql(
-			[new Say(
-				'TEST_CHANNEL',
-				'TEST_NON_BOT does not seem to be an untrusted bot'
-			)]
-		);
+		expect(chat.getLog()).to.eql([
+			['SAY',	TestChannel, 'TEST_NON_BOT does not seem to be an untrusted bot']
+		]);
 	});
 
 	it('!check bot', () => {
-		let modBot: ModBot = CreateTestModBot();
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!check TEST_BOT_2',
-			'TEST_SENDER',
 			false
 		);
-		expect(result).to.eql(
-			[new Say(
-				'TEST_CHANNEL',
-				'TEST_BOT_2 seems to be an untrusted bot'
-			)]
-		);
+		expect(chat.getLog()).to.eql([
+			['SAY', TestChannel, 'TEST_BOT_2 seems to be an untrusted bot']
+		]);
 	});
 
 	it('!check bot (quiet)', () => {
-		let modBot: ModBot = CreateTestModBot();
-		modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!quiet',
-			'TEST_SENDER',
 			false
 		);
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!check TEST_BOT_2',
-			'TEST_SENDER',
 			false
 		);
-		expect(result).to.eql(
-			[new Say(
-				'TEST_CHANNEL',
-				'TEST_BOT_2 seems to be an untrusted bot'
-			)]
-		);
+		expect(chat.getLog()).to.eql([
+			['SAY', TestChannel,'TEST_BOT_2 seems to be an untrusted bot']
+		]);
 	});
 
 	it('!check no name', () => {
-		let modBot: ModBot = CreateTestModBot();
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!check',
-			'TEST_SENDER',
 			false
 		);
-		expect(result).to.eql(
-			[new Say(
-				'TEST_CHANNEL',
-				'check requires a name'
-			)]
-		);
+		expect(chat.getLog()).to.eql([
+			['SAY', TestChannel, 'check requires a name']
+		]);
 	});
 
 	it('!check no name (quiet)', () => {
-		let modBot: ModBot = CreateTestModBot();
-		modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!quiet',
-			'TEST_SENDER',
 			false
 		);
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!check',
-			'TEST_SENDER',
 			false
 		);
-		expect(result).to.eql(
-			[new Say(
-				'TEST_CHANNEL',
-				'check requires a name'
-			)]
-		);
+		expect(chat.getLog()).to.eql([
+			['SAY',TestChannel,'check requires a name']
+		]);
 	});
 
 	it('!join valid', () => {
-		let modBot: ModBot = CreateTestModBot();
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			{'display-name': TestModBotUsername},
 			'!join OTHER_CHANNEL',
-			ClientOptions.identity?.username,
 			false
 		);
-		expect(result).to.eql(
-			[new Join('OTHER_CHANNEL')]
-		);
+		expect(chat.getLog()).to.eql([
+			['JOIN', 'OTHER_CHANNEL']
+		]);
 	});
 
 	it('!join valid (quiet)', () => {
-		let modBot: ModBot = CreateTestModBot();
-		modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!quiet',
-			'TEST_SENDER',
 			false
 		);
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		chat.simulateMessage(
+			TestChannel,
+			{'display-name': TestModBotUsername},
 			'!join OTHER_CHANNEL',
-			ClientOptions.identity?.username,
 			false
 		);
-		expect(result).to.eql(
-			[new Join('OTHER_CHANNEL')]
-		);
+		expect(chat.getLog()).to.eql([
+			['JOIN', 'OTHER_CHANNEL']
+		]);
 	});
 
 	it('!join no channel', () => {
-		let modBot: ModBot = CreateTestModBot();
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			{'display-name': TestModBotUsername},
 			'!join',
-			ClientOptions.identity?.username,
 			false
 		);
-		expect(result).to.eql([]);
+		expect(chat.getLog()).to.eql([]);
 	});
 
 	it('!join no channel (quiet)', () => {
-		let modBot: ModBot = CreateTestModBot();
-		modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!quiet',
-			'TEST_SENDER',
 			false
 		);
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		chat.simulateMessage(
+			TestChannel,
+			{'display-name': TestModBotUsername},
 			'!join',
-			ClientOptions.identity?.username,
 			false
 		);
-		expect(result).to.eql([]);
+		expect(chat.getLog()).to.eql([]);
 	});
 
 	it('!join without permission', () => {
-		let modBot: ModBot = CreateTestModBot();
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!join OTHER_CHANNEL',
-			'TEST_SENDER',
 			false
 		);
-		expect(result).to.eql([]);
+		expect(chat.getLog()).to.eql([]);
 	});
 
 	it('!join without permission (quiet)', () => {
-		let modBot: ModBot = CreateTestModBot();
-		modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!quiet',
-			'TEST_SENDER',
 			false
 		);
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!join OTHER_CHANNEL',
-			'TEST_SENDER',
 			false
 		);
-		expect(result).to.eql([]);
+		expect(chat.getLog()).to.eql([]);
 	});
 
 	it('!ping', () => {
-		let modBot: ModBot = CreateTestModBot();
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!ping',
-			'TEST_SENDER',
 			false
 		);
-		expect(result).to.eql(
-			[new Say('TEST_CHANNEL', "pong!")]
-		);
+		expect(chat.getLog()).to.eql([
+			['SAY', TestChannel, "pong!"]
+		]);
 	});
 
 	it('!ping (quiet)', () => {
-		let modBot: ModBot = CreateTestModBot();
-		modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!quiet',
-			'TEST_SENDER',
 			false
 		);
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!ping',
-			'TEST_SENDER',
 			false
 		);
-		expect(result).to.eql(
-			[new Say('TEST_CHANNEL', "pong!")]
-		);
+		expect(chat.getLog()).to.eql([
+			['SAY', TestChannel, "pong!"]
+		]);
 	});
 
 	it('!stop', () => {
-		let modBot: ModBot = CreateTestModBot();
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!stop',
-			'TEST_SENDER',
 			false
 		);
-		expect(result).to.eql(
-			[
-				new Say('TEST_CHANNEL', 'Bye!'),
-				new Part('TEST_CHANNEL')
-			]
-		);
+		expect(chat.getLog()).to.eql([
+			['SAY', TestChannel, 'Bye!'],
+			['PART', TestChannel]
+		]);
 	});
 
 	it('!stop (quiet)', () => {
-		let modBot: ModBot = CreateTestModBot();
-		modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!quiet',
-			'TEST_SENDER',
 			false
 		);
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!stop',
-			'TEST_SENDER',
 			false
 		);
-		expect(result).to.eql(
-			[
-				new Say('TEST_CHANNEL', 'Bye!'),
-				new Part('TEST_CHANNEL')
-			]
-		);
+		expect(chat.getLog()).to.eql([
+			['SAY', TestChannel, 'Bye!'],
+			['PART', TestChannel]
+		]);
 	});
 
 	it('non-bot joins', () => {
-		let modBot: ModBot = CreateTestModBot();
-		const result = modBot.processJoin(
-			'TEST_CHANNEL',
-			'TEST_NOT_A_BOT'
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateJoin(
+			TestChannel,
+			'TEST_NOT_A_BOT',
+			false
 		);
-		expect(result).to.eql([]);
+		expect(chat.getLog()).to.eql([]);
 	});
 
 	it('non-bot joins (quiet)', () => {
-		let modBot: ModBot = CreateTestModBot();
-		modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!quiet',
-			'TEST_SENDER',
 			false
 		);
-		const result = modBot.processJoin(
-			'TEST_CHANNEL',
-			'TEST_NOT_A_BOT'
+		chat.simulateJoin(
+			TestChannel,
+			'TEST_NOT_A_BOT',
+			false
 		);
-		expect(result).to.eql([]);
+		expect(chat.getLog()).to.eql([]);
 	});
 
 	it('bot joins', () => {
-		let modBot: ModBot = CreateTestModBot();
-		const result = modBot.processJoin(
-			'TEST_CHANNEL',
-			'TEST_BOT_1'
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateJoin(
+			TestChannel,
+			'TEST_BOT_1',
+			false
 		);
-		expect(result).to.eql([
-			new Say(
-				'TEST_CHANNEL',
-				'TEST_BOT_1 has registered as an untrusted bot, autobanning'
-			),
-			new BanBot(
-				'TEST_CHANNEL',
-				'TEST_BOT_1'
-			)
+		expect(chat.getLog()).to.eql([
+			['SAY', TestChannel, 'TEST_BOT_1 has registered as an untrusted bot, autobanning'],
+			['BAN', TestChannel, 'TEST_BOT_1']
 		]);
 	});
 
 	it('bot joins (quiet)', () => {
-		let modBot: ModBot = CreateTestModBot();
-		modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!quiet',
-			'TEST_SENDER',
 			false
 		);
-		const result = modBot.processJoin(
-			'TEST_CHANNEL',
-			'TEST_BOT_1'
+		chat.simulateJoin(
+			TestChannel,
+			'TEST_BOT_1',
+			false
 		);
-		expect(result).to.eql([
-			new BanBot(
-				'TEST_CHANNEL',
-				'TEST_BOT_1'
-			)
+		expect(chat.getLog()).to.eql([
+			['BAN', TestChannel, 'TEST_BOT_1']
 		]);
 	});
 
 	it('non-bot follow message', () => {
-		let modBot: ModBot = CreateTestModBot();
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			{'display-name': TestGoodChatBot},
 			'STARTTEST_NON_BOTEND',
-			'TEST_CHATBOT',
 			false
 		);
-		expect(result).to.eql([
-			new Say(
-				'TEST_CHANNEL',
-				'TEST_NON_BOT does not appear to be an untrusted bot. Welcome! (This welcome was sent automatically)'
-			)
+		expect(chat.getLog()).to.eql([
+			['SAY', TestChannel, 'TEST_NON_BOT does not appear to be an untrusted bot. Welcome! (This welcome was sent automatically)']
 		]);
 	});
 
 	it('non-bot follow message (quiet)', () => {
-		let modBot: ModBot = CreateTestModBot();
-		modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!quiet',
-			'TEST_SENDER',
 			false
 		);
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		chat.simulateMessage(
+			TestChannel,
+			{'display-name': TestGoodChatBot},
 			'STARTTEST_NON_BOTEND',
-			'TEST_CHATBOT',
 			false
 		);
-		expect(result).to.eql([]);
+		expect(chat.getLog()).to.eql([]);
 	});
 
 	it('bot follow message', () => {
-		let modBot: ModBot = CreateTestModBot();
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			{'display-name': TestGoodChatBot},
 			'STARTTEST_BOT_1END',
-			'TEST_CHATBOT',
 			false
 		);
-		expect(result).to.eql([
-			new Say(
-				'TEST_CHANNEL',
-				'TEST_BOT_1 has registered as an untrusted bot, autobanning'
-			),
-			new BanBot(
-				'TEST_CHANNEL',
-				'TEST_BOT_1'
-			)
+		expect(chat.getLog()).to.eql([
+			['SAY', TestChannel, 'TEST_BOT_1 has registered as an untrusted bot, autobanning'],
+			['BAN', TestChannel, 'TEST_BOT_1']
 		]);
 	});
 
 	it('bot follow message (quiet)', () => {
-		let modBot: ModBot = CreateTestModBot();
-		modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!quiet',
-			'TEST_SENDER',
 			false
 		);
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		chat.simulateMessage(
+			TestChannel,
+			{'display-name': TestGoodChatBot},
 			'STARTTEST_BOT_1END',
-			'TEST_CHATBOT',
 			false
 		);
-		expect(result).to.eql([
-			new BanBot(
-				'TEST_CHANNEL',
-				'TEST_BOT_1'
-			)
+		expect(chat.getLog()).to.eql([
+			['BAN', TestChannel, 'TEST_BOT_1']
 		]);
 	});
 
 	it('non-command non-follow message', () => {
-		let modBot: ModBot = CreateTestModBot();
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'A normal message',
-			'TEST_SENDER',
 			false
 		);
-		expect(result).to.eql([]);
+		expect(chat.getLog()).to.eql([]);
 	});
 
 	it('non-command non-follow message (quiet)', () => {
-		let modBot: ModBot = CreateTestModBot();
-		modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!quiet',
-			'TEST_SENDER',
 			false
 		);
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'A normal message',
-			'TEST_SENDER',
 			false
 		);
-		expect(result).to.eql([]);
+		expect(chat.getLog()).to.eql([]);
 	});
 
 	it('non-command non-follow chatbot message', () => {
-		let modBot: ModBot = CreateTestModBot();
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			{'display-name': TestGoodChatBot},
 			'A normal message',
-			'TEST_CHATBOT',
 			false
 		);
-		expect(result).to.eql([]);
+		expect(chat.getLog()).to.eql([]);
 	});
 
 	it('non-command non-follow chatbot message (quiet)', () => {
-		let modBot: ModBot = CreateTestModBot();
-		modBot.processMessage(
-			'TEST_CHANNEL',
+		const chat: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat);
+		chat.simulateMessage(
+			TestChannel,
+			TestContext,
 			'!quiet',
-			'TEST_SENDER',
 			false
 		);
-		const result = modBot.processMessage(
-			'TEST_CHANNEL',
+		chat.simulateMessage(
+			TestChannel,
+			{'display-name': TestGoodChatBot},
 			'A normal message',
-			'TEST_CHATBOT',
 			false
 		);
-		expect(result).to.eql([]);
+		expect(chat.getLog()).to.eql([]);
 	});
 
 	//TODO add self check to join
