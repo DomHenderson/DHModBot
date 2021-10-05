@@ -7,7 +7,7 @@ import { ClientId, ClientOptions, OAuthToken } from './secret/secrets';
 import { ITwitchAPI, TwitchAPI } from './twitchApi';
 
 UpdateBotList();
-setInterval(UpdateBotList, 5*60*1000);
+setInterval(UpdateBotList, 15*60*1000);
 const botAnalyser: ViewFollowChecker = new ViewFollowChecker('./list.json');
 const chatInterface: TwitchInterface = new TwitchInterface(ClientOptions);
 const modBot: ModBot = new ModBot(
