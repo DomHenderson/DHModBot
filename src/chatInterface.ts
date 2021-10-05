@@ -4,7 +4,8 @@ export interface IChatInterface {
 	addJoinListener(func: (channel: string, username: string, self: boolean) => void): void;
 	addMessageListener(func: (channel: string, context: tmi.ChatUserstate, message: string, self: boolean) => void ): void;
 	getConnectedChannels(): string[];
-	banBot(channel: string, username: string): void;
+	banFollowBot(channel: string, username: string): void;
+	banViewBot(channel: string, username: string): void;
 	join(channel: string): void;
 	part(channel: string): void;
 	say(channel: string, message: string): void;
@@ -51,12 +52,20 @@ export class TwitchInterface implements IChatInterface{
 		return this.connectedChannels;
 	}
 	
-	banBot(
+	banFollowBot(
 		channel: string,
 		botName: string
 	): void {
-		console.log(`	Banning(${channel}) ${botName}`);
-		this.client.say(channel, `/ban ${botName} Suspected bot`);
+		console.log(`	Banning(${channel}) ${botName} for following too fast`)
+		this.client.say(channel, `/ban ${botName} Suspected bot (following too fast)`)
+	}
+
+	banViewBot(
+		channel: string,
+		botName: string
+	): void {
+		console.log(`	Banning(${channel}) ${botName} for viewing too many channels simultaneously`);
+		this.client.say(channel, `/ban ${botName} Suspected bot (too many channels)`);
 	}
 	
 	join(channel: string): void {

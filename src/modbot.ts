@@ -53,7 +53,7 @@ export class ModBot implements ModBot {
 			if(!this.getQuiet(channel)) {
 				this.chat.say(channel,`${username} has registered as an untrusted bot, autobanning`);
 			}
-			this.chat.banBot(channel, username);
+			this.chat.banViewBot(channel, username);
 		} else {
 			console.log(`${username} is not an untrusted bot`);
 		}
@@ -87,7 +87,7 @@ export class ModBot implements ModBot {
 			if(!this.getQuiet(channel)) {
 				this.chat.say(channel,`${followerName} has registered as an untrusted bot, autobanning`);
 			}
-			this.chat.banBot(channel, followerName);
+			this.chat.banViewBot(channel, followerName);
 		} else {
 			if(!this.getQuiet(channel)) {
 				this.chat.say(channel,`${followerName} does not appear to be an untrusted bot. Welcome! (This welcome was sent automatically)`);

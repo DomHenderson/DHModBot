@@ -36,8 +36,11 @@ class TestChatInterface implements IChatInterface {
 	getConnectedChannels(): string[] {
 		return this.connectedChannels;
 	}
-	banBot(channel: string, username: string): void {
-		this.log.push(['BAN', channel, username]);
+	banFollowBot(channel: string, username: string): void {
+		this.log.push(['BAN_FOLLOW', channel, username]);
+	}
+	banViewBot(channel: string, username: string): void {
+		this.log.push(['BAN_VIEW', channel, username]);
 	}
 	join(channel: string): void {
 		this.log.push(['JOIN', channel]);
@@ -371,7 +374,7 @@ describe('Bot Commands', () => {
 		expect(chat.getLog()).to.eql([]);
 	});
 
-	it('bot joins', () => {
+	it('view bot joins', () => {
 		const chat: TestChatInterface = new TestChatInterface();
 		CreateTestModBot(chat);
 		chat.simulateJoin(
@@ -381,11 +384,11 @@ describe('Bot Commands', () => {
 		);
 		expect(chat.getLog()).to.eql([
 			['SAY', TestChannel, 'TEST_BOT_1 has registered as an untrusted bot, autobanning'],
-			['BAN', TestChannel, 'TEST_BOT_1']
+			['BAN_VIEW', TestChannel, 'TEST_BOT_1']
 		]);
 	});
 
-	it('bot joins (quiet)', () => {
+	it('view bot joins (quiet)', () => {
 		const chat: TestChatInterface = new TestChatInterface();
 		CreateTestModBot(chat);
 		chat.simulateMessage(
@@ -400,7 +403,7 @@ describe('Bot Commands', () => {
 			false
 		);
 		expect(chat.getLog()).to.eql([
-			['BAN', TestChannel, 'TEST_BOT_1']
+			['BAN_VIEW', TestChannel, 'TEST_BOT_1']
 		]);
 	});
 
@@ -492,7 +495,7 @@ describe('Bot Commands', () => {
 		expect(chat.getLog()).to.eql([]);
 	});
 
-	it('bot follow message', () => {
+	it('view bot follow message', () => {
 		const chat: TestChatInterface = new TestChatInterface();
 		CreateTestModBot(chat);
 		chat.simulateMessage(
@@ -503,11 +506,11 @@ describe('Bot Commands', () => {
 		);
 		expect(chat.getLog()).to.eql([
 			['SAY', TestChannel, 'TEST_BOT_1 has registered as an untrusted bot, autobanning'],
-			['BAN', TestChannel, 'TEST_BOT_1']
+			['BAN_VIEW', TestChannel, 'TEST_BOT_1']
 		]);
 	});
 
-	it('bot follow message (quiet)', () => {
+	it('view bot follow message (quiet)', () => {
 		const chat: TestChatInterface = new TestChatInterface();
 		CreateTestModBot(chat);
 		chat.simulateMessage(
@@ -523,7 +526,7 @@ describe('Bot Commands', () => {
 			false
 		);
 		expect(chat.getLog()).to.eql([
-			['BAN', TestChannel, 'TEST_BOT_1']
+			['BAN_VIEW', TestChannel, 'TEST_BOT_1']
 		]);
 	});
 
@@ -586,4 +589,25 @@ describe('Bot Commands', () => {
 		);
 		expect(chat.getLog()).to.eql([]);
 	});
+
+	it('!quiet is persistent', () => {
+		const chat1: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat1);
+		chat1.simulateMessage(
+			TestChannel,
+			TestContext,
+			'!quiet',
+			false
+		);
+		const chat2: TestChatInterface = new TestChatInterface();
+		CreateTestModBot(chat2);
+		chat2.simulateJoin(
+			TestChannel,
+			'TEST_BOT_1',
+			false
+		);
+		expect(chat2.getLog()).to.eql([
+			['BAN_VIEW', TestChannel, 'TEST_BOT_1']
+		]);
+	})
 })

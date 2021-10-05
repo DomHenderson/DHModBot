@@ -101,7 +101,7 @@ export class RecentFollowChecker {
 
 		toBan.forEach(({broadcaster, follower}) => {
 			if(this.chat.getConnectedChannels().includes(broadcaster)) {
-				this.chat.banBot(broadcaster, follower);
+				this.chat.banFollowBot(broadcaster, follower);
 			}
 		});
 	}
