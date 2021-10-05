@@ -1,5 +1,4 @@
 import fs from 'fs';
-import { ClientOptions } from './secret/secrets';
 import { IBotAnalyser } from './botAnalysis';
 import { IChatInterface } from './chatInterface';
 
@@ -187,17 +186,21 @@ export class ModBot implements ModBot {
 		this.saveLevels();
 	}
 	loadLevels() {
+		console.log('Loading levels');
 		this.verbosityLevels.clear();
-		const json = JSON.parse(fs.readFileSync('./src/secret/verbosity.json', 'utf-8'));
+		const json = JSON.parse(fs.readFileSync(this.verbosityPath, 'utf-8'));
 		for(let value in json) {
 			this.verbosityLevels.set(value, json[value]);
+			console.log(`${value} ${json[value]}`);
 		}
 	}
 	saveLevels() {
+		console.log('saving levels');
 		let json: any = {};
 		this.verbosityLevels.forEach((value, key) => {
 			json[key] = value;
 		})
+		console.log(JSON.stringify(json, null, 4));
 		fs.writeFileSync(this.verbosityPath, JSON.stringify(json, null, 4), 'utf8');
 	}
 }
