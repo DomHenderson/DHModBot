@@ -83,7 +83,7 @@ export class TwitchAPI implements ITwitchAPI {
 		
 	async getTimeBetweenFollows(userId: string): Promise<number|undefined> {
 		const follows = await this.getUsersFollowedBy(userId);
-		if(follows === undefined || follows.length < 2) return undefined;
+		if(follows === undefined || follows.length < 20) return undefined;
 		let gaps = [];
 		for(let i = 0; i+1 < follows.length; ++i) {
 			const laterDate = new Date(follows[i].followed_at);
